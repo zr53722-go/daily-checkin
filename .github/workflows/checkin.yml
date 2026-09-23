@@ -1,0 +1,50 @@
+name: Daily Checkin
+
+# 每天定时领取 WorkBuddy / Trae 积分
+#
+# 重要：GitHub 的 cron 使用 UTC 时间，北京时间 = UTC + 8
+#   想要北京时间 09:00 执行  → 写 0 1 * * *   (01:00 UTC)
+#   想要北京时间 00:30 执行  → 写 30 16 * * *  (前一天 16:30 UTC)
+#
+# 注意：GitHub 的 schedule 在仓库 60 天无活动后会被自动暂停。
+#     本仓库由本机脚本不定期推送 token，天然维持活跃，一般不会被暂停。
+#     如发现停止执行，去 Actions 页面点一次 "Enable workflow" 即可。
+
+on:
+  schedule:
+    # 北京时间 09:00（UTC 01:00）
+    - cron: '0 1 * * *'
+  # 支持手动触发，便于随时验证令牌是否有效
+  workflow_dispatch:
+
+# 同一时间只跑一个，避免重复领取
+concurrency:
+  group: daily-checkin
+  cancel-in-progress: false
+
+jobs:
+  checkin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run checkin
+        env:
+          WB_TOKEN: ${{ secrets.WB_TOKEN }}
+          WB_DOMAIN: www.codebuddy.cn
+          TRAE_TOKEN: ${{ secrets.TRAE_TOKEN }}
+          TRAE_DEVICE_ID: ${{ secrets.TRAE_DEVICE_ID }}
+          TRAE_HOST: https://api.trae.cn
+          TRAE_REQ_SOURCE: '2'
+        run: python checkin.py
